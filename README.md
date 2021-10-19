@@ -15,7 +15,14 @@ All done.
 ### `version`
 The desired version of Qt to install.
 
-Default: `5.15.2` (Latest LTS at the time of writing)
+You may also use a [SimpleSpec](https://python-semanticversion.readthedocs.io/en/latest/reference.html#semantic_version.SimpleSpec)
+to specify the version of Qt. 
+If your SimpleSpec matches multiple versions of Qt, the latest matching version will be selected.
+
+For example, the SimpleSpec `5.12` will resolve to the latest version of Qt 5.12 LTS currently available 
+(`5.12.11` at the time of this writing).
+
+Default: `6.2` (SimpleSpec that resolves to the latest LTS version of Qt, at the time of writing)
 
 ### `host`
 This is the host platform of the Qt version you will be installing. It's unlikely that you will need to set this manually if you are just building.
