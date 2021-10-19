@@ -4,6 +4,34 @@ import * as compareVersions from "compare-versions";
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as setupPython from 'setup-python/lib/find-python'
+import { ExecOptions } from "@actions/exec/lib/interfaces";
+
+const getDefaultHost = () => {
+  switch(process.platform) {
+    case "win32":   return "windows";
+    case "darwin":  return "mac";
+    default:        return "linux";
+  }
+}
+
+/**
+ * Execute a command and capture stdout.
+ *
+ * @param command The command to execute
+ * @param args    Arguments to the command
+ * @return        An object that includes trimmed standard output and a return value.
+ */
+const executeCaptureStdout = async (command: string, args: string[]): Promise<{stdout: string, return_value: number}> => {
+  let output = '';
+
+  const options: ExecOptions = {
+    listeners: {
+      stdout: (data: Buffer) => { output += data.toString(); }
+    }
+  };
+  const return_value = await exec.exec(command, args, options);
+  return { stdout: output.trim(), return_value };
+}
 
 async function run() {
     try {
@@ -14,7 +42,6 @@ async function run() {
       }
 
       const dir = (core.getInput("dir") || process.env.RUNNER_WORKSPACE) + "/Qt";
-      let version = core.getInput("version");
       const tools = core.getInput("tools");
       const setEnv = core.getInput("set-env");
 
@@ -32,44 +59,36 @@ async function run() {
         }
       }
 
+      // accommodate for differences in python 3 executable name
+      const pythonName = (process.platform == "win32") ? "python3" : "python";
+
+      // set host automatically if omitted
+      const host       = core.getInput("host")    || getDefaultHost();
+      const target     = core.getInput("target")  || "desktop";
+
+      // Determine actual version from SimpleSpec
+      const simpleSpec = core.getInput("version") || "6.2";     // Default: get the latest LTS Qt available
+      // Run `aqt list-qt --latest` to find the latest available Qt that fits the SimpleSpec
+      // If simpleSpec is actually a version, `aqt list-qt` will return that version, iff it exists
+      const { stdout: version, return_value } = await executeCaptureStdout(
+        `${pythonName} -m aqt list-qt`,
+        [host, target, "--spec", `"${simpleSpec}"`, "--latest"]
+      );
+      if (return_value !== 0) throw new Error(`Failed to resolve Qt version from SimpleSpec '${simpleSpec}'`);
+
       if (core.getInput("cached") != "true") {
         // 7-zip is required, and not included on macOS
         if (process.platform == "darwin") {
           await exec.exec("brew install p7zip")
         }
 
-        //accomodate for differences in python 3 executable name
-        let pythonName = "python3";
-        if (process.platform == "win32") {
-          pythonName = "python";
-        }
-
         await exec.exec(pythonName + " -m pip install setuptools wheel");
         await exec.exec(pythonName + " -m pip install \"py7zr" + core.getInput("py7zrversion") + "\"");
         await exec.exec(pythonName + " -m pip install \"aqtinstall" + core.getInput("aqtversion") + "\"");
-        let host = core.getInput("host");
-        const target = core.getInput("target");
         let arch = core.getInput("arch");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
 
-        //set host automatically if omitted
-        if (!host) {
-          switch(process.platform) {
-            case "win32": {
-                host = "windows";
-                break;
-            }
-            case "darwin": {
-                host = "mac";
-                break;
-            }
-            default: {
-                host = "linux";
-                break;
-            }
-          }
-        }
 
         //set arch automatically if omitted
         if (!arch) {
@@ -128,11 +147,9 @@ async function run() {
       //set environment variables
 
       // Weird naming scheme exception for qt 5.9
-      if (version == '5.9.0') {
-        version = '5.9'
-      }
-      
-      let qtPath = dir + "/" + version;
+      const version_dir = (version == '5.9.0') ? '5.9' : version;
+
+      let qtPath = dir + "/" + version_dir;
       qtPath = glob.sync(qtPath + '/**/*')[0];
       if (setEnv == "true") {
         if (tools) {
