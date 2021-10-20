@@ -74,7 +74,7 @@ async function run() {
         // If simpleSpec is actually a version, `aqt list-qt` will return that version, iff it exists
         const { stdout: version, return_value } = await executeCaptureStdout(
           `${pythonName} -m aqt list-qt`,
-          [host, target, "--spec", `"${simpleSpec}"`, "--latest"]
+          [host, target, "--spec", simpleSpec, "--latest"]
         );
         if (return_value !== 0) throw new Error(`Failed to resolve Qt version from SimpleSpec '${simpleSpec}'`);
         return version;
