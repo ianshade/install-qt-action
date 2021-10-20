@@ -68,13 +68,17 @@ async function run() {
 
       // Determine actual version from SimpleSpec
       const simpleSpec = core.getInput("version") || "6.2";     // Default: get the latest LTS Qt available
-      // Run `aqt list-qt --latest` to find the latest available Qt that fits the SimpleSpec
-      // If simpleSpec is actually a version, `aqt list-qt` will return that version, iff it exists
-      const { stdout: version, return_value } = await executeCaptureStdout(
-        `${pythonName} -m aqt list-qt`,
-        [host, target, "--spec", `"${simpleSpec}"`, "--latest"]
-      );
-      if (return_value !== 0) throw new Error(`Failed to resolve Qt version from SimpleSpec '${simpleSpec}'`);
+
+      const determineVersion = async (): Promise<string> => {
+        // Run `aqt list-qt --latest` to find the latest available Qt that fits the SimpleSpec
+        // If simpleSpec is actually a version, `aqt list-qt` will return that version, iff it exists
+        const { stdout: version, return_value } = await executeCaptureStdout(
+          `${pythonName} -m aqt list-qt`,
+          [host, target, "--spec", `"${simpleSpec}"`, "--latest"]
+        );
+        if (return_value !== 0) throw new Error(`Failed to resolve Qt version from SimpleSpec '${simpleSpec}'`);
+        return version;
+      }
 
       if (core.getInput("cached") != "true") {
         // 7-zip is required, and not included on macOS
@@ -88,6 +92,7 @@ async function run() {
         let arch = core.getInput("arch");
         const extra = core.getInput("extra");
         const modules = core.getInput("modules");
+        const version = await determineVersion();
 
 
         //set arch automatically if omitted
@@ -147,6 +152,7 @@ async function run() {
       //set environment variables
 
       // Weird naming scheme exception for qt 5.9
+      const version = await determineVersion();
       const version_dir = (version == '5.9.0') ? '5.9' : version;
 
       let qtPath = dir + "/" + version_dir;
