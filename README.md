@@ -64,7 +64,7 @@ Android: `android_armv7`
 ### `dir`
 This is the directory prefix that Qt will be installed to.
 
-For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` environment variable.
+For example, if you set dir to `${{ github.workspace }}/example/`, your bin folder will be located at `$GITHUB_WORKSPACE/example/Qt/5.12.9/(your_arch)/bin`. When possible, access your Qt directory through the `Qt5_DIR` or `Qt6_DIR` environment variable.
 
 Default: `$RUNNER_WORKSPACE` (this is one folder above the starting directory)
 
@@ -84,12 +84,12 @@ Default: none
 ### `cached`
 If it is set to `true`, then Qt won't be downloaded, but the environment variables will be set, and essential build tools will be installed.
 
-It can be used with [actions/cache](https://github.com/actions/cache), for example:
+It can be used with [actions/cache@v1](https://github.com/actions/cache/tree/releases/v1), for example:
 
 ```
 - name: Cache Qt
   id: cache-qt
-  uses: actions/cache@v1
+  uses: actions/cache@v1  # not v2!
   with:
     path: ../Qt
     key: ${{ runner.os }}-QtCache
@@ -111,9 +111,13 @@ Default: `true`
 ### `tools`
 
 Qt "tools" to be installed. I would recommend looking at [aqtinstall](https://github.com/miurahr/aqtinstall)'s instructions for this, as it is an experimental feature.
-Specify the tool name, tool version, and arch separated by commas, and separate multiple tools with spaces.
+Specify the tool name and tool variant name separated by commas, and separate multiple tools with spaces.
+If you wish to install all tools available for a given tool name, you can leave off the tool variant name.
 
-Example value: 'tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+For example, this value will install the most recent versions of QtIFW and QtCreator: 
+```
+    tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
+```
 
 ### `set-env`
 Set this to false if you want to avoid setting environment variables for whatever reason.
@@ -130,7 +134,7 @@ Default: `false`
 
 Version of [aqtinstall](https://github.com/miurahr/aqtinstall) to use, given in the format used by pip, for example: `==0.7.1`, `>=0.7.1`, `==0.7.*`. This is intended to be used to troubleshoot any bugs that might be caused or fixed by certain versions of aqtinstall.
 
-Default: `==1.2.5`
+Default: `==2.0.0`
 
 ### `py7zrversion`
 Version of py7zr in the same style as the aqtversion and intended to be used for the same purpose.
@@ -151,16 +155,16 @@ Example value: `--external 7z`
         version: '5.15.2'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_msvc2017_64'
+        arch: 'win64_msvc2019_64'
         dir: '${{ github.workspace }}/example/'
         install-deps: 'true'
         modules: 'qtcharts qtwebengine'
         cached: 'false'
         setup-python: 'true'
-        tools: 'tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator'
+        tools: 'tools_ifw tools_qtcreator,qt.tools.qtcreator'
         set-env: 'false'
         tools-only: 'false'
-        aqtversion: '==1.2.5'
+        aqtversion: '==2.0.0'
         py7zrversion: '==0.16.1'
         extra: '--external 7z'
 ```
